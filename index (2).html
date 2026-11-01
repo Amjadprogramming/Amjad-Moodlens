@@ -1,0 +1,1603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoodLens · 60 mood detector</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: linear-gradient(145deg, #f0f4f8 0%, #e2eaf2 100%);
+            font-family: 'Segoe UI', Roboto, system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            margin: 0;
+        }
+        .card {
+            max-width: 1100px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.82);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 2.5rem;
+            padding: 2rem 2.2rem 2.5rem;
+            box-shadow: 0 20px 50px -12px rgba(0, 20, 40, 0.3), 0 4px 18px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+        h1 {
+            font-weight: 600;
+            font-size: 2.3rem;
+            letter-spacing: -0.03em;
+            color: #0a2a3b;
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+            margin-bottom: 0.2rem;
+            flex-wrap: wrap;
+        }
+        h1 span {
+            background: #1d5b79;
+            color: white;
+            font-size: 1rem;
+            font-weight: 500;
+            padding: 0.25rem 1.1rem;
+            border-radius: 100px;
+            letter-spacing: 0.03em;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        .subhead {
+            color: #2c4e63;
+            font-size: 1.02rem;
+            margin-bottom: 2rem;
+            border-left: 4px solid #4f9da6;
+            padding-left: 1rem;
+            font-weight: 400;
+            background: rgba(79, 157, 166, 0.07);
+            border-radius: 0 12px 12px 0;
+            line-height: 1.45;
+            width: fit-content;
+            padding: 0.6rem 1.3rem;
+        }
+        .input-area {
+            display: flex;
+            flex-direction: column;
+            gap: 0.9rem;
+            margin-bottom: 2rem;
+        }
+        label {
+            font-weight: 500;
+            color: #1e3f53;
+            font-size: 0.95rem;
+            letter-spacing: 0.3px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        textarea {
+            width: 100%;
+            padding: 1.2rem 1.4rem;
+            font-size: 1rem;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            border: 1.5px solid #cbdae3;
+            border-radius: 28px;
+            background: white;
+            resize: vertical;
+            min-height: 120px;
+            box-shadow: inset 0 3px 12px rgba(0, 0, 0, 0.02);
+            transition: 0.2s;
+            line-height: 1.55;
+            color: #102b38;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #4f9da6;
+            box-shadow: 0 0 0 4px rgba(79, 157, 166, 0.15), inset 0 2px 8px rgba(0,0,0,0.02);
+            background: #ffffff;
+        }
+        .button-group {
+            display: flex;
+            gap: 0.55rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        button {
+            background: #1d5b79;
+            border: none;
+            color: white;
+            font-weight: 500;
+            font-size: 0.92rem;
+            padding: 0.75rem 1.4rem;
+            border-radius: 40px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: 0.15s;
+            box-shadow: 0 6px 16px rgba(27, 76, 102, 0.28);
+            letter-spacing: 0.3px;
+            border: 1px solid rgba(255,255,255,0.1);
+            flex: 0 1 auto;
+        }
+        button:hover { background: #134b64; transform: scale(1.02); box-shadow: 0 10px 20px -4px rgba(27, 76, 102, 0.45); }
+        button:active { transform: scale(0.98); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2); }
+        button.secondary {
+            background: transparent;
+            color: #1d5b79;
+            border: 1.5px solid #b6cfdb;
+            box-shadow: none;
+            font-weight: 500;
+            backdrop-filter: blur(4px);
+            font-size: 0.78rem;
+            padding: 0.5rem 0.9rem;
+        }
+        button.secondary:hover {
+            background: rgba(29, 91, 121, 0.07);
+            border-color: #4f9da6;
+            color: #0f4055;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transform: scale(1.02);
+        }
+
+        .mood-banner {
+            display: flex;
+            align-items: center;
+            gap: 1.3rem;
+            padding: 1.5rem 1.8rem;
+            border-radius: 2rem;
+            margin-bottom: 1.8rem;
+            box-shadow: 0 12px 30px -8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.6);
+            border: 1px solid rgba(255,255,255,0.8);
+            transition: 0.3s;
+            flex-wrap: wrap;
+        }
+        .mood-emoji { font-size: 3.8rem; line-height: 1; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15)); }
+        .mood-info { flex: 1; min-width: 220px; }
+        .mood-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1.8px;
+            font-weight: 700;
+            opacity: 0.7;
+            margin-bottom: 0.2rem;
+        }
+        .mood-name { font-size: 2.1rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 0.35rem; }
+        .mood-desc { font-size: 0.95rem; opacity: 0.85; line-height: 1.45; }
+        .confidence-bar {
+            width: 100%;
+            height: 9px;
+            background: rgba(0,0,0,0.08);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 0.9rem;
+        }
+        .confidence-fill { height: 100%; border-radius: 10px; transition: width 0.6s ease; }
+        .confidence-text { font-size: 0.75rem; margin-top: 0.35rem; opacity: 0.75; font-weight: 500; }
+
+        /* ===== MOOD THEMES (all 60) ===== */
+        .mood-happy       { background: linear-gradient(135deg, #fff8db, #ffecb0); color: #7a5500; }
+        .mood-sad         { background: linear-gradient(135deg, #e5eefc, #c9dcf5); color: #1e4e7a; }
+        .mood-angry       { background: linear-gradient(135deg, #ffe5e0, #fcc4bd); color: #8a2626; }
+        .mood-fear        { background: linear-gradient(135deg, #efe5f8, #d8c7ec); color: #4d2c6e; }
+        .mood-surprise    { background: linear-gradient(135deg, #ffeaf5, #ffcce5); color: #8c1f63; }
+        .mood-love        { background: linear-gradient(135deg, #ffe5ef, #ffc2d9); color: #99184c; }
+        .mood-neutral     { background: linear-gradient(135deg, #eaf0f4, #d4e0e8); color: #2c4859; }
+        .mood-anxious     { background: linear-gradient(135deg, #fdedde, #f9d4b8); color: #7a4210; }
+        .mood-excited     { background: linear-gradient(135deg, #fff4d1, #ffe08a); color: #7a4d00; }
+        .mood-grateful    { background: linear-gradient(135deg, #e8f8e3, #c9ecc0); color: #2e5b23; }
+        .mood-hopeful     { background: linear-gradient(135deg, #e2f8f2, #bde9dc); color: #18614b; }
+        .mood-proud       { background: linear-gradient(135deg, #f5e5fa, #e6c5f0); color: #5c2a6e; }
+        .mood-confused    { background: linear-gradient(135deg, #eae8f5, #d1cce8); color: #3e3968; }
+        .mood-bored       { background: linear-gradient(135deg, #efefec, #d9d9d4); color: #4e4e48; }
+        .mood-disgusted   { background: linear-gradient(135deg, #e8f2e1, #c8dfbd); color: #3d5e28; }
+        .mood-jealous     { background: linear-gradient(135deg, #e4f2dc, #c1e0b1); color: #36611c; }
+        .mood-embarrassed { background: linear-gradient(135deg, #ffe6e2, #ffc4bd); color: #8a3025; }
+        .mood-lonely      { background: linear-gradient(135deg, #eaf0f6, #cddae4); color: #2e4a5e; }
+        .mood-energetic   { background: linear-gradient(135deg, #fff6d1, #ffe27a); color: #7a5300; }
+        .mood-calm        { background: linear-gradient(135deg, #e5f5f5, #c0e2e2); color: #1e5f5f; }
+        .mood-stressed    { background: linear-gradient(135deg, #f8e5e5, #ecc3c3); color: #762a2a; }
+        .mood-nostalgic   { background: linear-gradient(135deg, #f8eedb, #e8d5b0); color: #6b4e1c; }
+        .mood-guilty      { background: linear-gradient(135deg, #f0e5f8, #dbc2ec); color: #55306e; }
+        .mood-sick        { background: linear-gradient(135deg, #e2f5e4, #b8e0bc); color: #1f5c2b; }
+        .mood-tired       { background: linear-gradient(135deg, #efeaf5, #d5c9e0); color: #463258; }
+        .mood-hungry      { background: linear-gradient(135deg, #ffeedd, #ffd59e); color: #7a4b00; }
+        .mood-thirsty     { background: linear-gradient(135deg, #e0f4fb, #b3dcec); color: #1a5570; }
+        .mood-pain        { background: linear-gradient(135deg, #ffe0e0, #ffb3b3); color: #7a1c1c; }
+        .mood-confident   { background: linear-gradient(135deg, #e5f0ff, #b8d1ff); color: #1a3f7a; }
+        .mood-creative    { background: linear-gradient(135deg, #f8e5ff, #e3b8ff); color: #5a1e7a; }
+        .mood-playful     { background: linear-gradient(135deg, #fff4e0, #ffdca8); color: #7a4d00; }
+        .mood-peaceful    { background: linear-gradient(135deg, #e5faf5, #b8ecdb); color: #1a5e47; }
+        .mood-romantic    { background: linear-gradient(135deg, #ffe8f0, #ffbcd1); color: #8a1e4a; }
+        .mood-affectionate{ background: linear-gradient(135deg, #ffece6, #ffcbbb); color: #8a3d1e; }
+        .mood-homesick    { background: linear-gradient(135deg, #ecf0f8, #c9d4e6); color: #2c3a5e; }
+        .mood-curious     { background: linear-gradient(135deg, #e5f4fb, #b8dceb); color: #1a4f6b; }
+        .mood-blessed     { background: linear-gradient(135deg, #f8f3dd, #e8dea8); color: #6b5e1c; }
+        .mood-defeated    { background: linear-gradient(135deg, #ececf0, #c9c9d1); color: #3e3e4a; }
+        .mood-motivated   { background: linear-gradient(135deg, #ffeedd, #ffcfaa); color: #7a3d00; }
+        .mood-overwhelmed { background: linear-gradient(135deg, #f5e5f5, #d9b8d9); color: #5c1e5c; }
+        .mood-content     { background: linear-gradient(135deg, #e8f5e8, #c0dfc0); color: #2e5e2e; }
+        .mood-restless    { background: linear-gradient(135deg, #f8eedb, #e6d0a8); color: #6b4a1c; }
+        /* 18 NEW */
+        .mood-disappointed{ background: linear-gradient(135deg, #ece4f5, #d4c8e6); color: #5c4a75; }
+        .mood-frustrated  { background: linear-gradient(135deg, #fde0d5, #f9bca0); color: #7a3e20; }
+        .mood-irritated   { background: linear-gradient(135deg, #ffe8d9, #ffc9a8); color: #7a3a10; }
+        .mood-amused      { background: linear-gradient(135deg, #fff4d1, #ffe08a); color: #7a5300; }
+        .mood-determined  { background: linear-gradient(135deg, #ffe8d1, #ffcfa5); color: #7a3d00; }
+        .mood-rebellious  { background: linear-gradient(135deg, #f5d5d5, #e8a8a8); color: #7a1e1e; }
+        .mood-sarcastic   { background: linear-gradient(135deg, #eae0d8, #d1c0b0); color: #5e4a3a; }
+        .mood-smug        { background: linear-gradient(135deg, #ede4de, #d6c4b8); color: #5e463a; }
+        .mood-sympathetic { background: linear-gradient(135deg, #e0eaf5, #b8cfe8); color: #1e3f6e; }
+        .mood-thoughtful  { background: linear-gradient(135deg, #e8e0f5, #cfb8e8); color: #3e1e6e; }
+        .mood-suspicious  { background: linear-gradient(135deg, #e5eaf0, #c5d0dd); color: #2e3f52; }
+        .mood-vulnerable  { background: linear-gradient(135deg, #f5e0e8, #e8b8c8); color: #6e1e3f; }
+        .mood-defensive   { background: linear-gradient(135deg, #e0e8e0, #b8cfb8); color: #2e4e2e; }
+        .mood-apathetic   { background: linear-gradient(135deg, #ebebeb, #d4d4d4); color: #3e3e3e; }
+        .mood-grieving    { background: linear-gradient(135deg, #d8e0f0, #b0bcd8); color: #1e2e52; }
+        .mood-wistful     { background: linear-gradient(135deg, #e5e6f5, #c5c8e8); color: #2e306e; }
+        .mood-mischievous { background: linear-gradient(135deg, #f5e0f5, #e8b8e8); color: #6e1e6e; }
+        .mood-awe         { background: linear-gradient(135deg, #e0ecf8, #b8d4ec); color: #1a3a6e; }
+
+        /* ===== CONFIDENCE FILL COLORS ===== */
+        .mood-happy .confidence-fill { background: #d4a017; }
+        .mood-sad .confidence-fill { background: #3e7cb1; }
+        .mood-angry .confidence-fill { background: #c0392b; }
+        .mood-fear .confidence-fill { background: #7d5ba6; }
+        .mood-surprise .confidence-fill { background: #c94094; }
+        .mood-love .confidence-fill { background: #d6336c; }
+        .mood-neutral .confidence-fill { background: #5b7c8d; }
+        .mood-anxious .confidence-fill { background: #d97d2c; }
+        .mood-excited .confidence-fill { background: #e6b800; }
+        .mood-grateful .confidence-fill { background: #5ca33c; }
+        .mood-hopeful .confidence-fill { background: #2fa88c; }
+        .mood-proud .confidence-fill { background: #a151c9; }
+        .mood-confused .confidence-fill { background: #6c66a8; }
+        .mood-bored .confidence-fill { background: #88887e; }
+        .mood-disgusted .confidence-fill { background: #6ca34b; }
+        .mood-jealous .confidence-fill { background: #5ca33c; }
+        .mood-embarrassed .confidence-fill { background: #d16a55; }
+        .mood-lonely .confidence-fill { background: #4e7c99; }
+        .mood-energetic .confidence-fill { background: #e6b800; }
+        .mood-calm .confidence-fill { background: #3d9999; }
+        .mood-stressed .confidence-fill { background: #b84d4d; }
+        .mood-nostalgic .confidence-fill { background: #b08b3e; }
+        .mood-guilty .confidence-fill { background: #8e5bb5; }
+        .mood-sick .confidence-fill { background: #3d8a4a; }
+        .mood-tired .confidence-fill { background: #7a5ba0; }
+        .mood-hungry .confidence-fill { background: #d49a00; }
+        .mood-thirsty .confidence-fill { background: #2a8caa; }
+        .mood-pain .confidence-fill { background: #c0392b; }
+        .mood-confident .confidence-fill { background: #2a5bb5; }
+        .mood-creative .confidence-fill { background: #9c3dc9; }
+        .mood-playful .confidence-fill { background: #e6a800; }
+        .mood-peaceful .confidence-fill { background: #2fa87a; }
+        .mood-romantic .confidence-fill { background: #d6336c; }
+        .mood-affectionate .confidence-fill { background: #d16a4a; }
+        .mood-homesick .confidence-fill { background: #4e6a9a; }
+        .mood-curious .confidence-fill { background: #2a8caa; }
+        .mood-blessed .confidence-fill { background: #b0952e; }
+        .mood-defeated .confidence-fill { background: #6a6a7a; }
+        .mood-motivated .confidence-fill { background: #d47a2a; }
+        .mood-overwhelmed .confidence-fill { background: #a33d9c; }
+        .mood-content .confidence-fill { background: #4a9a4a; }
+        .mood-restless .confidence-fill { background: #b08b3e; }
+        /* new */
+        .mood-disappointed .confidence-fill { background: #8e7ba6; }
+        .mood-frustrated .confidence-fill { background: #c96545; }
+        .mood-irritated .confidence-fill { background: #cc6622; }
+        .mood-amused .confidence-fill { background: #e0a020; }
+        .mood-determined .confidence-fill { background: #b56020; }
+        .mood-rebellious .confidence-fill { background: #a02828; }
+        .mood-sarcastic .confidence-fill { background: #7a5e54; }
+        .mood-smug .confidence-fill { background: #8d7368; }
+        .mood-sympathetic .confidence-fill { background: #5c8ab0; }
+        .mood-thoughtful .confidence-fill { background: #7563a5; }
+        .mood-suspicious .confidence-fill { background: #566575; }
+        .mood-vulnerable .confidence-fill { background: #b17487; }
+        .mood-defensive .confidence-fill { background: #657565; }
+        .mood-apathetic .confidence-fill { background: #7a7a7a; }
+        .mood-grieving .confidence-fill { background: #384a6b; }
+        .mood-wistful .confidence-fill { background: #7678a5; }
+        .mood-mischievous .confidence-fill { background: #a055a0; }
+        .mood-awe .confidence-fill { background: #4878b5; }
+
+        .keyword-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.8rem; }
+        .keyword-chip {
+            background: rgba(255,255,255,0.7);
+            padding: 0.25rem 0.85rem;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: 1px solid rgba(255,255,255,0.95);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.04);
+        }
+
+        .mood-scores-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
+            gap: 0.65rem;
+            margin-bottom: 1.8rem;
+        }
+        .mood-score-card {
+            background: #ffffffd9;
+            border-radius: 1rem;
+            padding: 0.75rem 1rem;
+            border: 1px solid #e2ecf2;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+            transition: 0.15s;
+        }
+        .mood-score-card.active {
+            border: 2px solid #4f9da6;
+            background: #f4fbff;
+            box-shadow: 0 8px 18px -5px rgba(79, 157, 166, 0.35);
+        }
+        .mood-score-card .emoji-sm { font-size: 1.7rem; line-height: 1; }
+        .mood-score-card .info { flex: 1; min-width: 0; }
+        .mood-score-card .name-sm {
+            font-size: 0.86rem;
+            font-weight: 600;
+            color: #1c495e;
+            margin-bottom: 0.15rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .mood-score-card .bar-sm { height: 6px; background: #e2ecf2; border-radius: 10px; overflow: hidden; }
+        .mood-score-card .bar-fill { height: 100%; border-radius: 10px; }
+        .mood-score-card .count-sm { font-size: 0.7rem; color: #5c7f92; font-weight: 500; }
+
+        .results-panel {
+            background: #ffffffd9;
+            backdrop-filter: blur(6px);
+            border-radius: 2rem;
+            padding: 1.6rem 1.8rem;
+            margin-top: 1.8rem;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 10px 28px -8px rgba(0, 20, 30, 0.12), inset 0 1px 0 #ffffff;
+        }
+        .results-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: #0b2a3b;
+            font-weight: 600;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px dashed #b8d0db;
+            padding-bottom: 0.7rem;
+            flex-wrap: wrap;
+        }
+        .results-header i { font-style: normal; font-size: 1.5rem; }
+
+        .token-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            margin-bottom: 1.6rem;
+            min-height: 2.5rem;
+            align-items: center;
+        }
+        .token-badge {
+            background: #e2eef5;
+            color: #124257;
+            padding: 0.35rem 1rem;
+            border-radius: 100px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            letter-spacing: 0.2px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+            border: 1px solid #ffffffb0;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            word-break: break-word;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.2rem;
+        }
+        .token-badge.pos { background: #d9e9f2; color: #0b4055; }
+        .token-badge.verb { background: #cbe4ec; color: #0d4a63; }
+        .token-badge.noun { background: #d3e7db; color: #1a4b34; }
+        .token-badge.adj { background: #f0e1c7; color: #69511e; }
+        .token-badge.stop-word {
+            background: #f0d9d9;
+            color: #7a3e3e;
+            border: 1px solid #e3c1c1;
+            text-decoration: line-through 1.5px rgba(160, 80, 80, 0.5);
+            opacity: 0.9;
+        }
+        .token-badge.mood-word {
+            box-shadow: 0 0 0 2px rgba(200, 140, 20, 0.55);
+            font-weight: 700;
+        }
+        .stop-badge {
+            background: #c94545; color: white; font-size: 0.65rem;
+            padding: 0.1rem 0.45rem; border-radius: 20px;
+            font-weight: 600; margin-left: 0.2rem;
+        }
+        .mood-badge {
+            background: #e8a33d; color: white; font-size: 0.65rem;
+            padding: 0.1rem 0.45rem; border-radius: 20px;
+            font-weight: 700; margin-left: 0.2rem; letter-spacing: 0.2px;
+        }
+
+        .sentence-block {
+            background: #f4faff;
+            border-radius: 1.2rem;
+            padding: 1rem 1.4rem;
+            margin-top: 0.8rem;
+            border-left: 5px solid #4f9da6;
+            box-shadow: inset 0 2px 8px rgba(255,255,255,0.8), 0 2px 6px rgba(0,0,0,0.02);
+        }
+        .sentence-block p { font-size: 1.05rem; line-height: 1.6; color: #103a4b; word-break: break-word; }
+        .cleaned-block {
+            background: #eefaf3;
+            border-radius: 1.2rem;
+            padding: 1.2rem 1.5rem;
+            margin-top: 1rem;
+            border-left: 5px solid #2f9e6b;
+            box-shadow: inset 0 2px 8px rgba(255,255,255,0.8), 0 2px 6px rgba(0,0,0,0.02);
+            border: 1px solid #c3ecd9;
+        }
+        .cleaned-block p { font-size: 1.1rem; line-height: 1.7; color: #0f3d2a; word-break: break-word; font-weight: 500; }
+        .placeholder-text { color: #8aaec0; font-style: italic; font-size: 0.95rem; }
+        .status-badge {
+            font-size: 0.8rem; background: #cfdfe9; border-radius: 40px;
+            padding: 0.25rem 0.9rem; color: #1c495e; font-weight: 500; margin-left: 0.7rem;
+        }
+        .stop-stats {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            background: #f7e9e9; padding: 0.2rem 0.9rem; border-radius: 40px;
+            font-size: 0.78rem; color: #8d3b3b; font-weight: 500;
+            margin-left: 0.6rem; border: 1px solid #edcfcf;
+        }
+        .cleaned-stats {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            background: #e0f2e9; padding: 0.2rem 0.9rem; border-radius: 40px;
+            font-size: 0.78rem; color: #1c6b47; font-weight: 500;
+            margin-left: 0.6rem; border: 1px solid #c3ecd9;
+        }
+        .footer-note {
+            margin-top: 1.8rem; text-align: center; font-size: 0.8rem;
+            color: #6993a8; letter-spacing: 0.3px;
+        }
+        .legend {
+            display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;
+            font-size: 0.8rem; color: #366277; background: #eef4f8;
+            padding: 0.6rem 1.2rem; border-radius: 60px; align-items: center;
+        }
+        .legend-item { display: flex; align-items: center; gap: 0.4rem; }
+        .legend-color { width: 14px; height: 14px; border-radius: 4px; }
+
+        .section-title {
+            display: flex; align-items: center; gap: 0.6rem;
+            margin-bottom: 0.7rem; flex-wrap: wrap;
+            font-weight: 600; color: #0b2a3b; font-size: 1.05rem;
+        }
+        .mini-stat { font-size: 0.8rem; padding: 0.2rem 0.8rem; border-radius: 40px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>
+            🔍 MoodLens
+            <span>60-mood detector</span>
+        </h1>
+        <div class="subhead">
+            NLTK-inspired tokenization · stop words · sentence segmentation · <strong>60 mood detection</strong>
+        </div>
+
+        <div class="input-area">
+            <label for="textInput">📝 How are you feeling?</label>
+            <textarea id="textInput" placeholder="Type your message... e.g. I feel so sick and tired today, my head hurts.">I feel so sick and tired today. My head hurts and my stomach is upset. I am exhausted and just want to lie down and sleep.</textarea>
+            <div class="button-group">
+                <button id="analyzeBtn">🔍 Detect mood</button>
+                <button id="sampleHappy" class="secondary">😊 Happy</button>
+                <button id="sampleSad" class="secondary">😢 Sad</button>
+                <button id="sampleAngry" class="secondary">😠 Angry</button>
+                <button id="sampleAnxious" class="secondary">😰 Anxious</button>
+                <button id="sampleLove" class="secondary">😍 Love</button>
+                <button id="sampleProud" class="secondary">😌 Proud</button>
+                <button id="sampleLonely" class="secondary">🥺 Lonely</button>
+                <button id="sampleSick" class="secondary">🤒 Sick</button>
+                <button id="sampleTired" class="secondary">😴 Tired</button>
+                <button id="sampleHungry" class="secondary">🍽️ Hungry</button>
+                <button id="samplePain" class="secondary">🤕 Pain</button>
+                <button id="sampleHomesick" class="secondary">🏠 Homesick</button>
+                <button id="sampleMotivated" class="secondary">🚀 Motivated</button>
+                <button id="samplePlayful" class="secondary">🎉 Playful</button>
+                <button id="samplePeaceful" class="secondary">🕊️ Peaceful</button>
+                <button id="sampleDetermined" class="secondary">💪 Determined</button>
+                <button id="sampleAmused" class="secondary">😄 Amused</button>
+                <button id="sampleFrustrated" class="secondary">😤 Frustrated</button>
+                <button id="sampleWistful" class="secondary">😔 Wistful</button>
+                <button id="clearBtn" class="secondary">🧹 Clear</button>
+            </div>
+        </div>
+
+        <div class="results-panel" id="resultsPanel">
+            <div class="results-header">
+                <i>📊</i> Analysis
+                <span class="status-badge" id="statusBadge">ready</span>
+                <span class="stop-stats" id="stopStats">🚫 stop words: 0</span>
+                <span class="cleaned-stats" id="cleanedStats">✨ kept: 0</span>
+            </div>
+            <div id="outputContainer">
+                <div class="placeholder-text">Mood, tokens, stop words, sentences and cleaned output will appear here.</div>
+            </div>
+        </div>
+        <div class="footer-note">
+            ⚡ powered by <strong>natural</strong> (NLTK-inspired) + custom mood lexicons (60 moods)
+        </div>
+    </div>
+
+    <!-- Natural language library (NLTK-inspired) -->
+    <script src="https://cdn.jsdelivr.net/npm/@mrizki/natural@0.6.4-build1/natural.min.js"></script>
+    <script>
+        (function(){
+            const outputContainer = document.getElementById('outputContainer');
+            const statusBadge = document.getElementById('statusBadge');
+            const stopStats = document.getElementById('stopStats');
+            const cleanedStats = document.getElementById('cleanedStats');
+            const textInput = document.getElementById('textInput');
+
+            // ---- Stop word list ----
+            const STOP_WORDS = new Set([
+                'a','about','above','after','again','against','all','am','an','and','any','are','as','at',
+                'be','because','been','before','being','below','between','both','but','by',
+                'can','did','do','does','doing','down','during',
+                'each','few','for','from','further',
+                'had','has','have','having','he','her','here','hers','herself','him','himself','his','how',
+                'i','if','in','into','is','it','its','itself','just',
+                'me','more','most','my','myself',
+                'no','nor','not','now',
+                'of','off','on','once','only','or','other','our','ours','ourselves','out','over','own',
+                'same','she','should','so','some','such',
+                'than','that','the','their','theirs','them','themselves','then','there','these','they',
+                'this','those','through','to','too',
+                'under','until','up','very',
+                'was','we','were','what','when','where','which','while','who','whom','why','will','with',
+                'you','your','yours','yourself','yourselves',
+                "aren't","can't","couldn't","didn't","doesn't","don't","hadn't","hasn't","haven't","he's",
+                "he'd","he'll","i'm","i've","i'd","i'll","isn't","it's","it'd","it'll","let's","mightn't",
+                "mustn't","shan't","she's","she'd","she'll","shouldn't","that's","there's","they're","they've",
+                "they'd","they'll","wasn't","we're","we've","we'd","we'll","weren't","what's","where's",
+                "who's","won't","wouldn't","you're","you've","you'd","you'll"
+            ]);
+
+            // =================================================================
+            // 60 MOOD LEXICONS
+            // =================================================================
+            const MOODS = {
+                happy: {
+                    name: 'Happy', emoji: '😊', className: 'mood-happy',
+                    desc: 'You sound joyful, positive, and full of good energy!',
+                    color: '#d4a017', weight: 1.2,
+                    words: new Set(['happy','joy','joyful','joyous','glad','delighted','cheerful','cheery','smile','smiling',
+                        'laugh','laughing','fun','enjoy','enjoying','enjoyed','celebrate','celebration','pleased','thrilled',
+                        'sunshine','sunny','beautiful','brilliant','super','yay','hooray','wow','glowing','delight','bliss',
+                        'blissful','optimistic','cheer','merry','jolly','glee','gleeful','upbeat','chipper'])
+                },
+                sad: {
+                    name: 'Sad', emoji: '😢', className: 'mood-sad',
+                    desc: 'You seem down, blue, or carrying some heaviness in your heart.',
+                    color: '#3e7cb1', weight: 1.2,
+                    words: new Set(['sad','sadness','unhappy','depressed','depressing','down','blue','gloomy','gloom',
+                        'cry','crying','cried','tears','tearful','miss','missing','missed','lost','loss','lose','losing',
+                        'hurt','hurting','pain','painful','ache','aching','broken','heartbroken','disappointed',
+                        'disappointing','disappointment','sorrow','sorrowful','grief','grieve','mourn','mourning',
+                        'hopeless','despair','miserable','misery','regret','regretful','sorry','sigh','weep','weeping',
+                        'somber','melancholy','heartache','unfortunate','unlucky','downcast','dejected'])
+                },
+                angry: {
+                    name: 'Angry', emoji: '😠', className: 'mood-angry',
+                    desc: 'You sound frustrated, irritated, or straight-up furious!',
+                    color: '#c0392b', weight: 1.3,
+                    words: new Set(['angry','anger','mad','furious','fury','rage','raging','irritated','irritating',
+                        'irritation','annoyed','annoying','annoyance','frustrated','frustrating','frustration','hate',
+                        'hated','hating','hatred','outraged','outrage','outrageous','livid','enraged','infuriated',
+                        'infuriating','pissed','grr','argh','ugh','damn','hell','stupid','idiot','idiotic','ridiculous',
+                        'unfair','betrayed','betrayal','fuming','seething','hostile','cross','resentful','resentment',
+                        'bitter','bitterness'])
+                },
+                fear: {
+                    name: 'Fearful', emoji: '😨', className: 'mood-fear',
+                    desc: 'You seem scared, frightened, or terrified about something.',
+                    color: '#7d5ba6', weight: 1.2,
+                    words: new Set(['fear','afraid','scared','scary','frightened','frightening','terrified','terrifying',
+                        'terror','dread','dreading','dreadful','threat','threatened','threatening','danger','dangerous',
+                        'unsafe','phobia','horror','horrible','horrified','scare','scares','alarm','alarmed','alarming',
+                        'petrified','panicked','spooked','creepy','eerie','ominous'])
+                },
+                anxious: {
+                    name: 'Anxious', emoji: '😰', className: 'mood-anxious',
+                    desc: 'You sound worried, nervous, or uneasy about something.',
+                    color: '#d97d2c', weight: 1.25,
+                    words: new Set(['anxious','anxiety','worried','worry','worrying','nervous','nervousness','uneasy',
+                        'unease','apprehensive','apprehension','tense','tension','stress','stressed','stressful',
+                        'restless','jittery','fidgety','onedge','butterflies','concerned','concern','concerns','uncertain',
+                        'uncertainty','doubt','doubtful','hesitant','hesitation'])
+                },
+                excited: {
+                    name: 'Excited', emoji: '🤩', className: 'mood-excited',
+                    desc: 'You are buzzing with enthusiasm and anticipation!',
+                    color: '#e6b800', weight: 1.25,
+                    words: new Set(['excited','exciting','excitement','thrilled','thrilling','eager','eagerly','enthusiastic',
+                        'enthusiasm','pumped','hyped','hype','stoked','amped','buzzing','cantwait','anticipate',
+                        'anticipation','thrill','adventure','adventurous','fired','psyched'])
+                },
+                love: {
+                    name: 'Loving', emoji: '😍', className: 'mood-love',
+                    desc: 'You are radiating warmth, affection, and love!',
+                    color: '#d6336c', weight: 1.3,
+                    words: new Set(['love','loving','loved','lovely','adore','adored','adoring','adorable','affection',
+                        'affectionate','romance','romantic','romantically','crush','crushing','darling','sweetheart',
+                        'honey','dear','dearie','beloved','cherish','cherished','treasure','treasured','fond','fondness',
+                        'passion','passionate','heart','hearts','kiss','kissing','kissed','hug','hugging','hugged',
+                        'cuddle','cuddling','cuddled','sweet','sweetie','sweetness','warmth','warm','tender','tenderness',
+                        'devotion','devoted','infatuated','smitten','enamored'])
+                },
+                grateful: {
+                    name: 'Grateful', emoji: '🙏', className: 'mood-grateful',
+                    desc: 'You feel thankful, blessed, and appreciative.',
+                    color: '#5ca33c', weight: 1.25,
+                    words: new Set(['grateful','gratitude','thankful','thanks','thank','blessed','blessing','blessings',
+                        'appreciate','appreciated','appreciation','appreciative','fortunate','lucky','honored','honour',
+                        'privileged','indebted','obliged','recognition','acknowledge','acknowledgment'])
+                },
+                hopeful: {
+                    name: 'Hopeful', emoji: '🌱', className: 'mood-hopeful',
+                    desc: 'You sound optimistic and full of positive expectations.',
+                    color: '#2fa88c', weight: 1.2,
+                    words: new Set(['hopeful','hope','hoping','hoped','optimistic','optimism','positive','positivity',
+                        'faith','faithful','trust','trusting','believe','believing','belief','confident','confidence',
+                        'encouraged','encouraging','inspired','inspiring','aspire','aspiring','aspiration','dream',
+                        'dreams','dreaming','bright','brighter','future','forward','promising'])
+                },
+                proud: {
+                    name: 'Proud', emoji: '😌', className: 'mood-proud',
+                    desc: 'You feel accomplished, confident, and satisfied with yourself.',
+                    color: '#a151c9', weight: 1.25,
+                    words: new Set(['proud','pride','proudly','accomplished','accomplishment','achievement','achieve',
+                        'achieved','success','successful','succeed','succeeded','win','winning','won','victory',
+                        'victorious','triumph','triumphant','honor','honored','dignity','dignified','selfrespect','worthy',
+                        'earned','deserve','deserved','deserving','capable','strong'])
+                },
+                confused: {
+                    name: 'Confused', emoji: '😕', className: 'mood-confused',
+                    desc: 'You sound puzzled, uncertain, or unsure of what is going on.',
+                    color: '#6c66a8', weight: 1.15,
+                    words: new Set(['confused','confusing','confusion','puzzled','puzzling','puzzle','uncertain',
+                        'uncertainty','unsure','unclear','lost','bewildered','bewildering','baffled','baffling',
+                        'perplexed','perplexing','mystified','mystifying','disoriented','disorienting','muddled',
+                        'foggy','fuzzy','blur','blurry','question','questions','questioning','wonder','wondering','huh'])
+                },
+                bored: {
+                    name: 'Bored', emoji: '😑', className: 'mood-bored',
+                    desc: 'You seem uninterested, restless, or just plain bored.',
+                    color: '#88887e', weight: 1.15,
+                    words: new Set(['bored','boring','bore','boredom','uninterested','uninteresting','dull','dullness',
+                        'monotonous','monotony','tedious','tedium','repetitive','repetition','stale','wearisome','wearied',
+                        'blah','meh','whatever','indifferent','indifference','apathetic','apathy','listless','lifeless',
+                        'drab','dreary','uninspired','uninspiring'])
+                },
+                disgusted: {
+                    name: 'Disgusted', emoji: '🤢', className: 'mood-disgusted',
+                    desc: 'You feel repulsed, revolted, or sickened by something.',
+                    color: '#6ca34b', weight: 1.25,
+                    words: new Set(['disgusted','disgust','disgusting','repulsed','repulsive','revolted','revolting',
+                        'sickened','sickening','nauseated','nauseating','nausea','gross','grossed','yuck','yucky','ew',
+                        'eww','ick','icky','filthy','filth','nasty','vile','loathsome','abhorrent','abhor','detest',
+                        'detestable','repugnant','offensive','offended'])
+                },
+                jealous: {
+                    name: 'Jealous', emoji: '😒', className: 'mood-jealous',
+                    desc: 'You sound envious or resentful of someone or something.',
+                    color: '#5ca33c', weight: 1.25,
+                    words: new Set(['jealous','jealousy','envious','envy','covet','coveting','resentful','resentment',
+                        'possessive','possessiveness','insecure','insecurity','comparison','compare','comparing','wish',
+                        'wishing','wanting','green','greeneyed','begrudge','grudge'])
+                },
+                embarrassed: {
+                    name: 'Embarrassed', emoji: '😳', className: 'mood-embarrassed',
+                    desc: 'You seem ashamed, awkward, or self-conscious.',
+                    color: '#d16a55', weight: 1.2,
+                    words: new Set(['embarrassed','embarrassing','embarrassment','ashamed','shame','shameful','shamed',
+                        'humiliated','humiliating','humiliation','awkward','awkwardness','selfconscious','blush',
+                        'blushing','flustered','mortified','mortifying','cringe','cringing','cringey','sheepish',
+                        'guilty','guilt','guiltridden','redfaced'])
+                },
+                lonely: {
+                    name: 'Lonely', emoji: '🥺', className: 'mood-lonely',
+                    desc: 'You feel isolated, disconnected, or in need of company.',
+                    color: '#4e7c99', weight: 1.25,
+                    words: new Set(['lonely','loneliness','alone','isolated','isolation','solitude','solitary','abandoned',
+                        'abandonment','forsaken','deserted','disconnected','disconnection','leftout','left','outcast',
+                        'outsider','unwanted','unloved','empty','emptiness','hollow','friendless','companionless',
+                        'withdrawn','secluded','seclusion'])
+                },
+                energetic: {
+                    name: 'Energetic', emoji: '⚡', className: 'mood-energetic',
+                    desc: 'You are full of vitality, drive, and get-up-and-go!',
+                    color: '#e6b800', weight: 1.2,
+                    words: new Set(['energetic','energy','energized','vitality','vital','vigorous','vigor','lively','alive',
+                        'active','activity','dynamic','driven','drive','motivated','motivation','motivating','power',
+                        'powerful','strength','strong','robust','sprightly','spry','bouncy','peppy','zippy','raring',
+                        'pumped','fired','unstoppable','productive','getgoing','gogetter'])
+                },
+                calm: {
+                    name: 'Calm', emoji: '😌', className: 'mood-calm',
+                    desc: 'You sound peaceful, relaxed, and at ease.',
+                    color: '#3d9999', weight: 1.15,
+                    words: new Set(['calm','calmness','peaceful','peace','relaxed','relaxing','relaxation','serene',
+                        'serenity','tranquil','tranquility','quiet','quietness','still','stillness','soothing','soothe',
+                        'soothed','gentle','gentleness','mellow','easy','easygoing','laidback','unwind','unwinding',
+                        'chill','chilled','chilling','zen','breathe','breathing','centered','grounded','composed'])
+                },
+                stressed: {
+                    name: 'Stressed', emoji: '😫', className: 'mood-stressed',
+                    desc: 'You seem overwhelmed, pressured, or under a lot of strain.',
+                    color: '#b84d4d', weight: 1.25,
+                    words: new Set(['stressed','stress','stressful','overwhelmed','overwhelming','pressure','pressured',
+                        'pressed','burden','burdened','burdensome','strain','strained','tension','tense','exhausted',
+                        'exhausting','exhaustion','drained','draining','burnout','burned','burnt','frantic','hectic',
+                        'chaotic','chaos','overloaded','overload','swamped','snowed','maxed','overworked'])
+                },
+                nostalgic: {
+                    name: 'Nostalgic', emoji: '📻', className: 'mood-nostalgic',
+                    desc: 'You are feeling sentimental about the past or fond memories.',
+                    color: '#b08b3e', weight: 1.25,
+                    words: new Set(['nostalgic','nostalgia','remember','remembering','remembered','memory','memories',
+                        'reminisce','reminiscing','reminiscent','past','childhood','young','youth','backthen','those days',
+                        'used','usedto','once','golden','throwback','retro','vintage','sentimental','sentimentality',
+                        'longing','yearning','wistful','wistfully'])
+                },
+                guilty: {
+                    name: 'Guilty', emoji: '😔', className: 'mood-guilty',
+                    desc: 'You feel remorseful or responsible for something wrong.',
+                    color: '#8e5bb5', weight: 1.25,
+                    words: new Set(['guilty','guilt','guiltridden','remorse','remorseful','remorsefulness','apologetic',
+                        'apologize','apology','regret','regretful','regretting','ashamed','shame','shameful','blame',
+                        'blameworthy','fault','faulty','responsible','responsibility','conscience','conscientious',
+                        'repent','repentant','repentance','penitent','penitence','contrite','contrition','wrongdoing',
+                        'wrong'])
+                },
+                surprised: {
+                    name: 'Surprised', emoji: '😲', className: 'mood-surprise',
+                    desc: 'You sound shocked, amazed, or caught off guard!',
+                    color: '#c94094', weight: 1.1,
+                    words: new Set(['surprise','surprised','surprising','shock','shocked','shocking','amazed','amazing',
+                        'amaze','astonished','astonishing','astounded','stunned','stunning','unexpected','unbelievable',
+                        'incredible','whoa','omg','gosh','gee','suddenly','sudden','startled','startling','jolted',
+                        'flabbergasted','speechless','mindblowing','unreal','woah'])
+                },
+                neutral: {
+                    name: 'Neutral', emoji: '😐', className: 'mood-neutral',
+                    desc: 'Your message feels calm, factual, or emotionally balanced.',
+                    color: '#5b7c8d', weight: 1.0,
+                    words: new Set([])
+                },
+                sick: {
+                    name: 'Sick', emoji: '🤒', className: 'mood-sick',
+                    desc: 'You sound unwell, ill, or physically under the weather.',
+                    color: '#3d8a4a', weight: 1.3,
+                    words: new Set(['sick','ill','illness','unwell','sickness','sickly','fever','feverish','fevered',
+                        'flu','influenza','cold','cough','coughing','sneeze','sneezing','sore','throat','headache',
+                        'headaches','migraine','nausea','nauseous','vomit','vomiting','throwing','upset','stomach',
+                        'stomachache','diarrhea','infection','infected','virus','viral','bacterial','disease','diseased',
+                        'ailing','ailment','malady','poorly','queasy','woozy','dizzy','dizziness','chills','shivering',
+                        'weak','weakness','feeble','infirm','suffering','sufferer','patient','bedridden','recovering',
+                        'recuperating','convalescing'])
+                },
+                tired: {
+                    name: 'Tired', emoji: '😴', className: 'mood-tired',
+                    desc: 'You seem exhausted, sleepy, or in need of rest.',
+                    color: '#7a5ba0', weight: 1.3,
+                    words: new Set(['tired','tiredness','exhausted','exhaustion','exhausting','fatigued','fatigue',
+                        'sleepy','sleepiness','drowsy','drowsiness','weary','weariness','worn','wornout','drained',
+                        'draining','depleted','depletion','spent','knackered','beat','bushed','burned','burnt','fried',
+                        'shattered','wiped','wipedout','yawning','yawn','nap','napping','rest','resting','restless',
+                        'insomnia','sleepless','sleeplessness','overslept','under slept','sluggish','lethargic',
+                        'lethargy','sluggishness','slothful','lazy','laziness'])
+                },
+                hungry: {
+                    name: 'Hungry', emoji: '🍽️', className: 'mood-hungry',
+                    desc: 'You sound hungry, peckish, or in need of a good meal.',
+                    color: '#d49a00', weight: 1.25,
+                    words: new Set(['hungry','hunger','hungering','starving','starved','starvation','famished','peckish',
+                        'appetite','appetizing','craving','cravings','crave','craved','munchies','munchy','snack',
+                        'snacking','snackish','food','foodie','eat','eating','ate','eaten','meal','meals','dinner',
+                        'lunch','breakfast','brunch','supper','feast','feasting','famish','voracious','ravenous',
+                        'empty','emptiness','growling','growl','stomach','stomachgrowling'])
+                },
+                thirsty: {
+                    name: 'Thirsty', emoji: '🥤', className: 'mood-thirsty',
+                    desc: 'You sound thirsty or in need of a drink.',
+                    color: '#2a8caa', weight: 1.2,
+                    words: new Set(['thirsty','thirst','thirsting','parched','parchedness','dry','dryness','dehydrated',
+                        'dehydration','drink','drinking','drank','drunk','water','hydration','hydrate','hydrating',
+                        'beverage','beverages','juice','soda','coffee','tea','beer','wine','cocktail','throat','cottonmouth',
+                        'desert','desertdry'])
+                },
+                pain: {
+                    name: 'In Pain', emoji: '🤕', className: 'mood-pain',
+                    desc: 'You seem to be suffering from physical or emotional pain.',
+                    color: '#c0392b', weight: 1.3,
+                    words: new Set(['pain','painful','painfully','ache','aching','ached','hurt','hurting','hurts','sore',
+                        'soreness','throb','throbbing','throbbed','sting','stinging','stung','burn','burning','burned',
+                        'cramp','cramping','cramped','spasm','spasming','injury','injured','injuries','wound','wounded',
+                        'wounding','bruise','bruised','bruising','fracture','fractured','broken','break','torn','tear',
+                        'agony','agonizing','agonized','torment','tormented','tormenting','suffering','sufferer','misery',
+                        'miserable','distress','distressed','distressing','discomfort','uncomfortable','uncomfortably',
+                        'sharp','dull','chronic','acute','severe','intense'])
+                },
+                confident: {
+                    name: 'Confident', emoji: '💪', className: 'mood-confident',
+                    desc: 'You sound self-assured, bold, and sure of yourself.',
+                    color: '#2a5bb5', weight: 1.25,
+                    words: new Set(['confident','confidence','confidently','assured','assurance','selfassured','selfassurance',
+                        'bold','boldly','boldness','brave','bravery','courage','courageous','fearless','fearlessness',
+                        'determined','determination','resolute','resolutely','resilient','resilience','strong','strength',
+                        'powerful','power','capable','capability','competent','competence','skilled','skillful','able',
+                        'assertive','assertiveness','decisive','decisiveness','certain','certainty','sure','surely',
+                        'poised','poise','composed','composure','selfesteem','selfworth','worthy','empowered','empowering'])
+                },
+                creative: {
+                    name: 'Creative', emoji: '🎨', className: 'mood-creative',
+                    desc: 'You are feeling imaginative, inspired, or artistic.',
+                    color: '#9c3dc9', weight: 1.2,
+                    words: new Set(['creative','creativity','creatively','create','creating','created','creation','inspired',
+                        'inspiring','inspiration','imaginative','imagination','imagine','imagining','imagined','artistic',
+                        'artist','art','arts','craft','crafty','crafting','crafted','design','designing','designed',
+                        'designer','innovative','innovation','innovate','innovating','original','originality','inventive',
+                        'invention','inventing','invent','visionary','vision','dream','dreaming','dreamer','musical',
+                        'music','writing','writer','painting','painter','drawing','draw','sketch','sketching','sculpting',
+                        'sculpture','poetry','poet','expressive','expression','muse','mused'])
+                },
+                playful: {
+                    name: 'Playful', emoji: '🎉', className: 'mood-playful',
+                    desc: 'You sound fun, mischievous, and full of playful energy!',
+                    color: '#e6a800', weight: 1.2,
+                    words: new Set(['playful','playfully','play','playing','played','game','games','gaming','gamed',
+                        'fun','funny','funnier','funniness','silly','silliness','goofy','goofiness','mischievous',
+                        'mischief','cheeky','cheekiness','teasing','tease','teased','joking','joke','joked','joker',
+                        'prank','pranks','pranking','pranked','trick','tricks','tricking','tricked','laughing','laugh',
+                        'laughs','giggle','giggling','giggled','giggly','chuckle','chuckling','chuckled','whimsical',
+                        'whimsy','frolic','frolicking','romp','romping','cavort','cavorting','sport','sportive'])
+                },
+                peaceful: {
+                    name: 'Peaceful', emoji: '🕊️', className: 'mood-peaceful',
+                    desc: 'You sound deeply calm, serene, and at peace.',
+                    color: '#2fa87a', weight: 1.2,
+                    words: new Set(['peaceful','peacefully','peace','peacefulness','serene','serenely','serenity','tranquil',
+                        'tranquility','tranquilly','calm','calmness','calmly','quiet','quietly','quietness','still',
+                        'stillness','silent','silence','silently','harmonious','harmony','balanced','balance','centered',
+                        'grounded','zen','meditative','meditation','meditate','meditating','mindful','mindfulness',
+                        'relaxed','relaxing','relaxation','soothing','soothe','soothed','restful','restfully','gentle',
+                        'gentleness','soft','softly','blissful','bliss','content','contentment','satisfied','satisfaction',
+                        'untroubled','undisturbed','untouched','protected','safe','safety','secure','security'])
+                },
+                romantic: {
+                    name: 'Romantic', emoji: '💕', className: 'mood-romantic',
+                    desc: 'You sound swept up in romance, love, and affection.',
+                    color: '#d6336c', weight: 1.3,
+                    words: new Set(['romantic','romance','romantically','romanticism','love','loving','loved','lovely',
+                        'lover','lovers','beloved','sweetheart','darling','dear','dearie','honey','baby','babe','angel',
+                        'cherish','cherished','treasure','treasured','adore','adored','adoring','adorable','affection',
+                        'affectionate','passion','passionate','passionately','desire','desires','desiring','desired',
+                        'desirable','attraction','attracted','attractive','crush','crushing','crushed','smitten','swoon',
+                        'swooning','swooned','kiss','kissing','kissed','kisses','cuddle','cuddling','cuddled','cuddles',
+                        'embrace','embracing','embraced','caress','caressing','caressed','intimate','intimacy','tender',
+                        'tenderness','tenderly','warm','warmth','warmly','heart','hearts','heartbeat','heartbeats',
+                        'flirt','flirting','flirted','flirtatious','date','dating','dated','courtship','courting'])
+                },
+                affectionate: {
+                    name: 'Affectionate', emoji: '🤗', className: 'mood-affectionate',
+                    desc: 'You sound warm, caring, and full of affection.',
+                    color: '#d16a4a', weight: 1.25,
+                    words: new Set(['affectionate','affection','affectionately','caring','care','cares','cared','careful',
+                        'carefully','warm','warmth','warmly','tender','tenderness','tenderly','gentle','gentleness',
+                        'gently','kind','kindness','kindly','loving','love','loved','lovely','dear','dearie','sweet',
+                        'sweetie','sweetness','sweetly','fond','fondness','fondly','cherish','cherished','cherishing',
+                        'treasure','treasured','treasuring','adore','adored','adoring','hug','hugging','hugged','hugs',
+                        'cuddle','cuddling','cuddled','cuddles','kiss','kissing','kissed','kisses','embrace','embracing',
+                        'embraced','caress','caressing','caressed','nurture','nurturing','nurtured','support','supporting',
+                        'supported','supportive','compassion','compassionate','empathy','empathetic','sympathy',
+                        'sympathetic'])
+                },
+                homesick: {
+                    name: 'Homesick', emoji: '🏠', className: 'mood-homesick',
+                    desc: 'You seem to be missing home or longing for familiar places.',
+                    color: '#4e6a9a', weight: 1.3,
+                    words: new Set(['homesick','homesickness','home','homes','missing','miss','missed','misses','longing',
+                        'long','longed','yearning','yearn','yearned','nostalgia','nostalgic','remember','remembering',
+                        'remembered','memory','memories','childhood','family','families','parents','mother','mom','mum',
+                        'father','dad','sibling','siblings','brother','sister','grandparent','grandparents','grandma',
+                        'grandpa','hometown','village','town','city','country','far','away','distant','distance',
+                        'estranged','separated','separation','abroad','foreign','traveling','travelling'])
+                },
+                curious: {
+                    name: 'Curious', emoji: '🔍', className: 'mood-curious',
+                    desc: 'You sound inquisitive, eager to learn, and full of questions.',
+                    color: '#2a8caa', weight: 1.15,
+                    words: new Set(['curious','curiosity','curiously','inquisitive','inquisitiveness','question','questions',
+                        'questioning','questioned','wonder','wondering','wondered','wonders','wonderment','explore',
+                        'exploring','explored','exploration','explorer','discover','discovering','discovered','discovery',
+                        'discoveries','learn','learning','learned','learnt','study','studying','studied','studies','research',
+                        'researching','researched','investigate','investigating','investigated','investigation','inquire',
+                        'inquiring','inquired','inquiry','inquiries','ask','asking','asked','fascinated','fascinating',
+                        'fascination','interested','interesting','interest','intrigued','intriguing','intrigue','keen',
+                        'eager','eagerly','thirst','thirsty','knowledge','knowledgeable'])
+                },
+                blessed: {
+                    name: 'Blessed', emoji: '✨', className: 'mood-blessed',
+                    desc: 'You feel fortunate, favored, and deeply thankful.',
+                    color: '#b0952e', weight: 1.25,
+                    words: new Set(['blessed','blessing','blessings','bless','blesses','fortunate','fortunately',
+                        'lucky','luck','luckily','favored','favoured','favor','favour','grace','graced','graceful',
+                        'grateful','gratitude','thankful','thanks','thank','appreciate','appreciated','appreciation',
+                        'appreciative','honored','honoured','honor','honour','privileged','privilege','gift','gifts',
+                        'gifted','divine','divinely','sacred','sacredly','holy','holiness','spiritual','spiritually',
+                        'spirit','soul','soulful','heavenly','heaven','heavens','miracle','miraculous','miracles',
+                        'providence','providential'])
+                },
+                defeated: {
+                    name: 'Defeated', emoji: '😞', className: 'mood-defeated',
+                    desc: 'You sound beaten down, discouraged, or like you have given up.',
+                    color: '#6a6a7a', weight: 1.3,
+                    words: new Set(['defeated','defeat','defeating','defeats','beaten','beat','beating','beats','conquered',
+                        'conquer','conquering','conquers','vanquished','vanquish','vanquishing','overcome','overcoming',
+                        'overcame','overwhelmed','overwhelming','overwhelm','crushed','crush','crushing','broken','break',
+                        'breaking','breaks','destroyed','destroy','destroying','destroys','ruined','ruin','ruining','ruins',
+                        'lost','lose','losing','loses','failure','fail','failing','fails','failed','hopeless','hopelessness',
+                        'despair','despairing','despaired','despairs','discouraged','discourage','discouraging','discourages',
+                        'disheartened','dishearten','disheartening','disheartens','demoralized','demoralize','demoralizing',
+                        'demoralizes','resigned','resign','resigning','resigns','resignation','giveup','gaveup','givingup',
+                        'gave','quit','quitting','quits','surrender','surrendering','surrendered','surrenders','yield',
+                        'yielding','yielded','yields'])
+                },
+                motivated: {
+                    name: 'Motivated', emoji: '🚀', className: 'mood-motivated',
+                    desc: 'You sound driven, determined, and ready to take action!',
+                    color: '#d47a2a', weight: 1.3,
+                    words: new Set(['motivated','motivation','motivate','motivating','motivates','motivational','driven',
+                        'drive','drives','driving','drove','determined','determination','determine','determining',
+                        'determines','goal','goals','goalfocused','ambitious','ambition','ambitions','aspire','aspiring',
+                        'aspires','aspiration','aspirations','purpose','purposeful','purposely','focused','focus','focusing',
+                        'focuses','dedicated','dedication','dedicate','dedicating','dedicates','committed','commitment',
+                        'commit','committing','commits','persistent','persistence','persist','persisting','persists',
+                        'perseverance','persevere','persevering','perseveres','tenacious','tenacity','relentless',
+                        'relentlessly','unstoppable','relentlessness','resilient','resilience','strong','strength',
+                        'empowered','empowering','empower','empowers','inspired','inspiring','inspire','inspires','inspiration',
+                        'passionate','passion','passions','hungry','hunger','hustle','hustling','hustles','hustled','grind',
+                        'grinding','grinds','work','working','works','worked','effort','efforts','effortless','strive',
+                        'striving','strives','strived','striven'])
+                },
+                overwhelmed: {
+                    name: 'Overwhelmed', emoji: '😵', className: 'mood-overwhelmed',
+                    desc: 'You feel buried, swamped, or like everything is too much.',
+                    color: '#a33d9c', weight: 1.3,
+                    words: new Set(['overwhelmed','overwhelming','overwhelm','overwhelms','swamped','swamp','swamping',
+                        'swamps','buried','bury','burying','buries','drowning','drown','drowning','drowns','flooded',
+                        'flood','flooding','floods','snowed','snow','snowing','snows','inundated','inundate','inundating',
+                        'inundates','slammed','slam','slamming','slams','hit','hitting','hits','piled','pile','piling',
+                        'piles','stacked','stack','stacking','stacks','loaded','load','loading','loads','heaped','heap',
+                        'heaping','heaps','pressure','pressured','pressures','pressed','pressuring','burden','burdened',
+                        'burdens','burdening','overloaded','overload','overloading','overloads','strained','strain',
+                        'straining','strains','stressed','stress','stressing','stresses','stressful','anxious','anxiety',
+                        'anxieties','panic','panicked','panicking','panics','frantic','frantically','hectic','hectically',
+                        'chaotic','chaos','mayhem','madhouse','circus','zoo','jungle'])
+                },
+                content: {
+                    name: 'Content', emoji: '😊', className: 'mood-content',
+                    desc: 'You feel satisfied, comfortable, and quietly happy.',
+                    color: '#4a9a4a', weight: 1.2,
+                    words: new Set(['content','contentment','contented','contentedly','satisfied','satisfy','satisfying',
+                        'satisfies','satisfaction','satisfactory','pleased','please','pleasing','pleases','pleasure',
+                        'pleasurable','pleasantly','pleasant','pleasantness','happy','happiness','happily','glad','gladly',
+                        'gladness','comfortable','comfort','comforting','comforts','comforted','atease','ease','easy',
+                        'easily','easygoing','relaxed','relax','relaxing','relaxes','relaxation','calm','calmness',
+                        'calmly','peaceful','peace','peacefully','serene','serenity','serenely','tranquil','tranquility',
+                        'tranquilly','quiet','quietly','quietness','still','stillness','fulfilled','fulfill','fulfilling',
+                        'fulfills','fulfillment','fulfilment','gratified','gratify','gratifying','gratifies','gratification'])
+                },
+                restless: {
+                    name: 'Restless', emoji: '😖', className: 'mood-restless',
+                    desc: 'You sound fidgety, unable to settle, or itching for change.',
+                    color: '#b08b3e', weight: 1.2,
+                    words: new Set(['restless','restlessness','restlessly','fidgety','fidget','fidgeting','fidgets','fidgeted',
+                        'jittery','jitter','jitters','jittering','jittered','uneasy','unease','uneasily','unsettled',
+                        'unsettle','unsettling','unsettles','antsy','twitchy','twitch','twitching','twitches','twitched',
+                        'edgy','edge','edginess','edgily','tense','tension','tensely','agitated','agitate','agitating',
+                        'agitates','agitation','impatient','impatience','impatiently','itchy','itch','itching','itches',
+                        'itched','squirming','squirm','squirms','squirmed','pacing','pace','paces','paced','wandering',
+                        'wander','wanders','wandered','roaming','roam','roams','roamed'])
+                },
+                // ================ 18 NEW MOODS ================
+                disappointed: {
+                    name: 'Disappointed', emoji: '😞', className: 'mood-disappointed',
+                    desc: 'You feel let down, underwhelmed, or unsatisfied.',
+                    color: '#8e7ba6', weight: 1.25,
+                    words: new Set(['disappointed','disappointing','disappointment','letdown','underwhelmed','underwhelming',
+                        'unsatisfied','dissatisfaction','dissatisfied','disillusioned','disenchanted','disenchantment',
+                        'deflated','deflating','unfulfilled','thwarted','thwart','thwarting','dashed','dashing','dashing',
+                        'letdowns','letdown','fizzled','fizzle','fizzling','anticlimactic','anticlimax','dampened',
+                        'dampen','dampening','dampens','soured','sour','souring','sours','fellflat','fallflat','fallingflat'])
+                },
+                frustrated: {
+                    name: 'Frustrated', emoji: '😤', className: 'mood-frustrated',
+                    desc: 'You feel blocked, stuck, or unable to make progress.',
+                    color: '#c96545', weight: 1.3,
+                    words: new Set(['frustrated','frustrating','frustration','frustrations','blocked','block','blocking',
+                        'blocks','stuck','stifled','stifling','stifle','stifles','thwarted','thwart','thwarting','thwarts',
+                        'hindered','hinder','hindering','hinders','hamstrung','hampering','hamper','hampers','impeded',
+                        'impede','impeding','impedes','stonewalled','stonewall','stonewalling','stonewalls','stymied',
+                        'stymie','stymies','stymying','balked','balk','balking','balks','cornered','corner','cornering',
+                        'corners','trapped','trap','trapping','traps','bottled','bottling','bottles','bottleneck','bottlenecks'])
+                },
+                irritated: {
+                    name: 'Irritated', emoji: '😠', className: 'mood-irritated',
+                    desc: 'You feel annoyed, bothered, or mildly angry.',
+                    color: '#cc6622', weight: 1.2,
+                    words: new Set(['irritated','irritating','irritation','irritations','annoyed','annoying','annoyance',
+                        'annoyances','bothered','bother','bothering','bothers','peeved','peeve','peeving','peeves','miffed',
+                        'miff','miffing','miffs','rankled','rankle','rankling','rankles','nettled','nettle','nettling',
+                        'nettles','vexed','vex','vexing','vexes','irked','irk','irking','irks','aggravated','aggravate',
+                        'aggravating','aggravates','cross','grumpy','grumpily','grumpiness','cranky','crankiness','tetchy',
+                        'testy','touchy','snappish','snappy','short','shorttempered','shortfused'])
+                },
+                amused: {
+                    name: 'Amused', emoji: '😄', className: 'mood-amused',
+                    desc: 'You find something funny or entertaining.',
+                    color: '#e0a020', weight: 1.2,
+                    words: new Set(['amused','amusing','amusement','amusingly','funny','funnier','funniest','funnily','hilarious',
+                        'hilariously','hilariousness','humor','humorous','humour','humoured','humorously','comical','comically',
+                        'comedic','entertaining','entertain','entertained','entertains','witty','wit','wittily','wittiness',
+                        'chuckling','chuckled','chuckle','chuckles','giggling','giggle','giggled','giggles','snickering',
+                        'snicker','snickered','snickers','sniggering','snigger','sniggered','sniggers','joke','jokes','joking',
+                        'joked','joker','jokers','jest','jests','jesting','jester','jesters','mirth','mirthful','mirthfully',
+                        'droll','drollness','drollery','ribtickling','ribtickler'])
+                },
+                determined: {
+                    name: 'Determined', emoji: '💪', className: 'mood-determined',
+                    desc: 'You are resolute, unwavering, and set on your goal.',
+                    color: '#b56020', weight: 1.3,
+                    words: new Set(['determined','determination','determine','determining','determines','resolute','resolutely',
+                        'resolution','resolved','resolve','resolving','resolves','unwavering','undeterred','undaunted',
+                        'steadfast','steadfastly','steadfastness','dogged','doggedly','doggedness','tenacious','tenaciously',
+                        'tenacity','persistent','persistently','persistence','persist','persisting','persists','relentless',
+                        'relentlessly','relentlessness','perseverance','persevere','persevering','perseveres','staunch',
+                        'staunchly','staunchness','committed','commit','commits','committing','dedication','dedicated',
+                        'dedicate','dedicates','driven','drive','drives','drove','firm','firmly','firmness','decided',
+                        'decide','deciding','decides','undeterred','undeterrable'])
+                },
+                rebellious: {
+                    name: 'Rebellious', emoji: '🏴', className: 'mood-rebellious',
+                    desc: 'You feel defiant, rebellious, or ready to push back.',
+                    color: '#a02828', weight: 1.3,
+                    words: new Set(['rebellious','rebel','rebels','rebelling','rebelled','rebellion','rebellions','defiant',
+                        'defiantly','defiance','defy','defies','defying','defied','resist','resists','resisting','resisted',
+                        'resistance','disobedient','disobey','disobeying','disobeyed','disobediently','disobedience',
+                        'insubordinate','insubordination','mutinous','mutiny','mutinies','mutinied','mutinying','revolt',
+                        'revolts','revolting','revolted','revolutionary','revolution','revolutions','riotous','riot','riots',
+                        'rioting','rioted','unruly','wayward','disorderly','disruptive','disrupt','disrupts','disrupting',
+                        'disrupted','disruption','anarchic','anarchist','anarchists','anarchy'])
+                },
+                sarcastic: {
+                    name: 'Sarcastic', emoji: '😏', className: 'mood-sarcastic',
+                    desc: 'You sound sarcastic, ironic, or snarky.',
+                    color: '#7a5e54', weight: 1.25,
+                    words: new Set(['sarcastic','sarcastically','sarcasm','sarcasms','ironic','ironically','irony','ironies',
+                        'snarky','snark','snarks','snarkily','snarkiness','sardonic','sardonically','sardonicism','mocking',
+                        'mock','mocks','mocked','mockery','mockeries','mocker','mockers','derisive','derision','derided',
+                        'deride','deriding','derides','cynical','cynically','cynicism','cynic','cynics','cutting','biting',
+                        'sharp','sharply','sharpness','caustic','caustically','causticity','acerbic','acerbically','acerbity',
+                        'wry','wryly','wryness','snide','snidely','snideness','sneering','sneer','sneered','sneers'])
+                },
+                smug: {
+                    name: 'Smug', emoji: '😏', className: 'mood-smug',
+                    desc: 'You sound smug, self-satisfied, or superior.',
+                    color: '#8d7368', weight: 1.2,
+                    words: new Set(['smug','smugly','smugness','selfsatisfied','selfsatisfaction','selfcongratulatory',
+                        'superior','superiority','condescending','condescendingly','condescension','patronizing',
+                        'patronizingly','patronize','patronized','patronizes','pompous','pompously','pompousness','arrogant',
+                        'arrogantly','arrogance','conceited','conceitedly','conceitedness','vain','vainly','vanity','haughty',
+                        'haughtily','haughtiness','pretentious','pretentiously','pretension','pretentiousness','boastful',
+                        'boastfully','boast','boasts','boasted','boasting','bragging','brag','brags','bragged','braggadocio',
+                        'uppity','snooty','snobbish','snobby','snob','snobs','snobbery'])
+                },
+                sympathetic: {
+                    name: 'Sympathetic', emoji: '🥺', className: 'mood-sympathetic',
+                    desc: 'You feel compassionate, understanding, or sorry for someone.',
+                    color: '#5c8ab0', weight: 1.25,
+                    words: new Set(['sympathetic','sympathetically','sympathy','sympathies','sympathize','sympathizes',
+                        'sympathizing','sympathized','sympathizer','sympathizers','empathize','empathizes','empathizing',
+                        'empathized','empathy','empathetic','empathic','empathically','understanding','understand',
+                        'understands','understood','compassionate','compassion','compassionately','pity','pities','pitying',
+                        'pitied','pitiful','sorry','sorrier','sorriest','sorrow','sorrowful','condolence','condolences',
+                        'comfort','comforts','comforting','comforted','console','consoles','consoling','consoled',
+                        'consolation','support','supports','supporting','supported','supportive','care','cares','caring',
+                        'cared','concern','concerns','concerned','heartfelt','heartfully'])
+                },
+                thoughtful: {
+                    name: 'Thoughtful', emoji: '🤔', className: 'mood-thoughtful',
+                    desc: 'You sound thoughtful, contemplative, or reflective.',
+                    color: '#7563a5', weight: 1.2,
+                    words: new Set(['thoughtful','thoughtfully','thoughtfulness','thought','thoughts','thinking','think',
+                        'thinks','contemplate','contemplates','contemplating','contemplated','contemplation','contemplative',
+                        'contemplatively','reflect','reflects','reflecting','reflected','reflection','reflections','reflective',
+                        'reflectively','ponder','ponders','pondering','pondered','ponderous','pensive','pensively','pensiveness',
+                        'musing','muse','muses','mused','brooding','brood','broods','brooded','broody','meditative','meditate',
+                        'meditates','meditating','meditated','meditation','introspective','introspection','introspect',
+                        'introspects','introspecting','philosophical','philosophically','philosophize','philosophizes',
+                        'philosophized','philosophizing','cogitate','cogitates','cogitating','cogitated','cogitation',
+                        'ruminate','ruminates','ruminating','ruminated','rumination','ruminative'])
+                },
+                suspicious: {
+                    name: 'Suspicious', emoji: '🕵️', className: 'mood-suspicious',
+                    desc: 'You sound suspicious, distrustful, or wary.',
+                    color: '#566575', weight: 1.25,
+                    words: new Set(['suspicious','suspiciously','suspicion','suspicions','suspect','suspects','suspecting',
+                        'suspected','distrust','distrusts','distrusting','distrusted','distrustful','distrustfully','mistrust',
+                        'mistrusts','mistrusting','mistrusted','mistrustful','wary','warily','wariness','leery','leeriness',
+                        'cautious','cautiously','caution','cautiousness','skeptical','skeptically','skepticism','sceptical',
+                        'sceptically','scepticism','doubtful','doubtfully','doubt','doubts','doubting','doubted','doubter',
+                        'doubters','dubious','dubiously','dubiousness','questioning','question','questions','questioned',
+                        'cynical','cynically','cynicism','paranoid','paranoia','paranoiac','paranoiacs','uneasy','uneasily',
+                        'uneasiness'])
+                },
+                vulnerable: {
+                    name: 'Vulnerable', emoji: '🤍', className: 'mood-vulnerable',
+                    desc: 'You sound vulnerable, exposed, or emotionally open.',
+                    color: '#b17487', weight: 1.2,
+                    words: new Set(['vulnerable','vulnerably','vulnerability','vulnerableness','exposed','expose','exposes',
+                        'exposing','exposure','raw','rawness','naked','nakedly','defenseless','defenceless','defenselessly',
+                        'helpless','helplessly','helplessness','powerless','powerlessly','powerlessness','weak','weakly',
+                        'weakness','frail','frailly','frailty','fragile','fragilely','fragility','unguarded','unshielded',
+                        'unprotected','unsheltered','open','openly','openness','tender','tenderly','tenderness','sensitive',
+                        'sensitively','sensitivity','susceptive','exposedness','wounded','wounding','bruised','bruising'])
+                },
+                defensive: {
+                    name: 'Defensive', emoji: '🛡️', className: 'mood-defensive',
+                    desc: 'You sound defensive, guarded, or protective.',
+                    color: '#657565', weight: 1.2,
+                    words: new Set(['defensive','defensively','defensiveness','defend','defends','defending','defended',
+                        'defender','defenders','guard','guards','guarding','guarded','guardedly','guardedness','protect',
+                        'protects','protecting','protected','protection','protective','protectively','protectiveness',
+                        'shielded','shield','shields','shielding','wall','walls','walled','warding','ward','wards','warded',
+                        'resistance','resistant','resist','resists','resisting','resisted','aloof','aloofly','aloofness',
+                        'distant','distantly','distance','detached','detachedly','detachment','cold','coldly','coldness',
+                        'withdrawn','withdraw','withdraws','withdrawing','withdrew','evasive','evasively','evade','evades',
+                        'evading','evaded','evasion','guardedness','shielding','shieldingness'])
+                },
+                apathetic: {
+                    name: 'Apathetic', emoji: '😐', className: 'mood-apathetic',
+                    desc: 'You sound apathetic, indifferent, or emotionally detached.',
+                    color: '#7a7a7a', weight: 1.2,
+                    words: new Set(['apathetic','apathetically','apathy','apatheticness','indifferent','indifferently',
+                        'indifference','unconcerned','unconcernedly','unconcern','uninterested','uninterestedly','disinterested',
+                        'disinterestedly','detached','detachedly','detachment','aloof','aloofly','aloofness','uncaring',
+                        'uncaringly','unfeeling','unfeelingly','emotionless','emotionlessly','emotionlessness','passionless',
+                        'passionlessly','passionlessness','listless','listlessly','listlessness','lethargic','lethargically',
+                        'lethargy','sluggish','sluggishly','sluggishness','numb','numbly','numbness','dead','deadness',
+                        'empty','emptily','emptiness','hollow','hollowly','hollowness','blank','blankly','blankness','vacant',
+                        'vacantly','vacuity','vacuous','vacuousness','insouciant','insouciance','insouciantly'])
+                },
+                grieving: {
+                    name: 'Grieving', emoji: '😭', className: 'mood-grieving',
+                    desc: 'You are mourning a loss or dealing with deep grief.',
+                    color: '#384a6b', weight: 1.3,
+                    words: new Set(['grieving','grieve','grieves','grieved','grief','griefs','griefstricken','mourning',
+                        'mourn','mourns','mourned','mourner','mourners','mournful','mournfully','mournfulness','bereaved',
+                        'bereave','bereaves','bereaving','bereavement','bereavements','sorrow','sorrows','sorrowing',
+                        'sorrowed','sorrowful','sorrowfully','sorrowfulness','lament','laments','lamenting','lamented',
+                        'lamentation','lamentations','weep','weeps','weeping','wept','wail','wails','wailing','wailed',
+                        'wailer','wailers','cry','cries','crying','cried','sob','sobs','sobbing','sobbed','heartbroken',
+                        'heartbreak','heartbreaks','heartbrokenly','brokenhearted','inconsolable','inconsolably','desolate',
+                        'desolately','desolation','devastated','devastate','devastating','devastates','devastation','crushed',
+                        'crush','crushing','crushed','bereft','bereftness','lamentably','lamentable'])
+                },
+                wistful: {
+                    name: 'Wistful', emoji: '😔', className: 'mood-wistful',
+                    desc: 'You sound wistful, longing, or quietly yearning.',
+                    color: '#7678a5', weight: 1.2,
+                    words: new Set(['wistful','wistfully','wistfulness','longing','long','longs','longed','longingly',
+                        'longings','yearn','yearns','yearning','yearned','yearnful','yearnfully','pine','pines','pining',
+                        'pined','pineful','ache','aches','aching','ached','acheful','crave','craves','craving','craved',
+                        'cravingly','desire','desires','desiring','desired','desirous','desirously','hanker','hankers',
+                        'hankering','hankered','hankerer','miss','misses','missing','missed','wishful','wishfully',
+                        'wishfulness','wish','wishes','wishing','wished','nostalgic','nostalgia','nostalgically','sentimental',
+                        'sentimentally','sentimentality','melancholic','melancholically','melancholy','melancholies',
+                        'plaintive','plaintively','plaintiveness','bittersweet','bittersweetly','bittersweetness'])
+                },
+                mischievous: {
+                    name: 'Mischievous', emoji: '😈', className: 'mood-mischievous',
+                    desc: 'You sound mischievous, cheeky, or up to something.',
+                    color: '#a055a0', weight: 1.2,
+                    words: new Set(['mischievous','mischievously','mischief','mischiefs','mischievousness','cheeky','cheekily',
+                        'cheek','cheekiness','naughty','naughtily','naughtiness','impish','impishly','impishness','roguish',
+                        'roguishly','rogue','rogues','rascal','rascals','rascally','rascality','scamp','scamps','scampish',
+                        'prankish','prank','pranks','prankster','pranksters','tricksy','trick','tricks','trickster',
+                        'tricksters','trickery','sly','slyly','slyness','cunning','cunningly','cunningness','crafty','craftily',
+                        'craftiness','wily','wilily','wiliness','devilish','devilishly','devilment','devilry','deviltry',
+                        'frolicsome','friskiness','frisky'])
+                },
+                awe: {
+                    name: 'Awe', emoji: '😮', className: 'mood-awe',
+                    desc: 'You sound filled with wonder, awe, or reverence.',
+                    color: '#4878b5', weight: 1.2,
+                    words: new Set(['awe','awes','awed','awing','awesome','awesomely','awesomeness','awestruck','awe-struck',
+                        'aweinspiring','awe-inspiring','wonder','wonders','wondered','wondering','wonderful','wonderfully',
+                        'wonderment','marvel','marvels','marveled','marveling','marvelled','marvelling','marvelous',
+                        'marvelously','marvellous','miraculously','reverent','reverently','reverence','reverences','revere',
+                        'reveres','revering','revered','worship','worships','worshiping','worshipping','worshipped',
+                        'worshipful','worshipfully','venerate','venerates','venerating','venerated','veneration','sublime',
+                        'sublimely','sublimity','transcendent','transcendentally','transcendence','breathtaking',
+                        'breathtakingly','stunning','stunningly','staggering','staggeringly','overwhelmingly','magnificent',
+                        'magnificently','magnificence','splendid','splendidly','splendor','glorious','gloriously','glory'])
+                }
+            };
+
+            const MOOD_KEYS = Object.keys(MOODS);
+
+            // ---- Helpers ----
+            function normalizeTerm(term) {
+                if (!term) return '';
+                return term.replace(/^[^a-zA-Z0-9']+|[^a-zA-Z0-9']+$/g, '').toLowerCase();
+            }
+
+            function isStopWord(term) {
+                const cleaned = normalizeTerm(term);
+                if (cleaned === '') return false;
+                return STOP_WORDS.has(cleaned);
+            }
+
+            function tokenize(text) {
+                if (typeof natural !== 'undefined' && natural.WordTokenizer) {
+                    try {
+                        const tokenizer = new natural.WordTokenizer();
+                        return tokenizer.tokenize(text);
+                    } catch(e) { /* fallback below */ }
+                }
+                return text.match(/\b[\w']+\b/g) || [];
+            }
+
+            function detectMood(tokens) {
+                const scores = {};
+                const matchedWords = {};
+                MOOD_KEYS.forEach(key => { scores[key] = 0; matchedWords[key] = []; });
+
+                const meaningfulTokens = tokens.filter(t => !isStopWord(t) && normalizeTerm(t) !== '');
+
+                meaningfulTokens.forEach(term => {
+                    const cleaned = normalizeTerm(term);
+                    if (!cleaned) return;
+                    MOOD_KEYS.forEach(key => {
+                        if (MOODS[key].words.has(cleaned)) {
+                            scores[key] += MOODS[key].weight;
+                            matchedWords[key].push(cleaned);
+                        }
+                    });
+                });
+
+                let topMood = 'neutral';
+                let topScore = 0;
+                MOOD_KEYS.forEach(key => {
+                    if (key === 'neutral') return;
+                    if (scores[key] > topScore) { topScore = scores[key]; topMood = key; }
+                });
+                if (topScore === 0) topMood = 'neutral';
+
+                let confidence = 0;
+                if (topScore > 0) {
+                    const total = Object.values(scores).reduce((a,b) => a+b, 0);
+                    confidence = Math.min(100, Math.round((topScore / total) * 100));
+                    if (confidence < 50 && topScore <= 1.5) confidence = 65;
+                    if (confidence < 40) confidence = 55;
+                } else {
+                    confidence = Math.min(75, 45 + Math.min(30, meaningfulTokens.length * 3));
+                }
+
+                return { mood: topMood, confidence, scores, matchedWords, isNeutral: topMood === 'neutral' };
+            }
+
+            function posToBadgeClass(tag) {
+                if (!tag) return '';
+                const mainTag = tag.split(' ')[0];
+                if (mainTag.startsWith('Verb')) return 'verb';
+                if (mainTag.startsWith('Noun')) return 'noun';
+                if (mainTag.startsWith('Adjective')) return 'adj';
+                return 'pos';
+            }
+
+            // ==================== MAIN ANALYSIS ====================
+            function analyzeText(text) {
+                if (!text || text.trim() === '') {
+                    outputContainer.innerHTML = '<div class="placeholder-text">⚠️ Please enter some text so I can sense your mood.</div>';
+                    statusBadge.textContent = 'empty';
+                    stopStats.textContent = '🚫 stop words: 0';
+                    cleanedStats.textContent = '✨ kept: 0';
+                    return;
+                }
+
+                try {
+                    const tokens = tokenize(text);
+
+                    // POS approximation
+                    const posMap = new Map();
+                    tokens.forEach((token, idx) => {
+                        const word = normalizeTerm(token);
+                        let tag = 'Noun';
+                        if (/ing$|ed$/.test(word) && word.length > 3) tag = 'Verb';
+                        else if (/ly$/.test(word)) tag = 'Adverb';
+                        else if (/ful$|ous$|ive$|able$|al$|ish$/.test(word)) tag = 'Adjective';
+                        else if (/^(i|you|he|she|it|we|they|me|him|her|us|them)$/.test(word)) tag = 'Pronoun';
+                        else if (/^(a|an|the|this|that|these|those)$/.test(word)) tag = 'Determiner';
+                        else if (/^(and|or|but|so|yet|for|nor)$/.test(word)) tag = 'Conjunction';
+                        else if (/^(in|on|at|by|for|with|about|against|between|into|through|during|before|after|above|below|to|from|up|down|off|over|under)$/.test(word)) tag = 'Preposition';
+                        posMap.set(idx, tag);
+                    });
+
+                    const sentences = text.match(/[^.!?]+[.!?]*/g) || [text];
+
+                    let stopWordCount = 0;
+                    let keptWordCount = 0;
+                    tokens.forEach(term => {
+                        if (isStopWord(term)) stopWordCount++;
+                        else if (normalizeTerm(term) !== '') keptWordCount++;
+                    });
+
+                    const moodResult = detectMood(tokens);
+                    const moodKey = moodResult.mood;
+                    const moodData = MOODS[moodKey];
+                    const topMatchedWords = moodResult.matchedWords[moodKey] || [];
+
+                    let sentimentScore = null;
+                    if (typeof natural !== 'undefined' && natural.SentimentAnalyzer && natural.PorterStemmer) {
+                        try {
+                            const analyzer = new natural.SentimentAnalyzer('English', natural.PorterStemmer, 'afinn');
+                            sentimentScore = analyzer.getSentiment(tokens);
+                        } catch(e) { /* ignore */ }
+                    }
+
+                    let html = '';
+
+                    // ==== MOOD BANNER ====
+                    html += `<div class="mood-banner ${moodData.className}">
+                        <div class="mood-emoji">${moodData.emoji}</div>
+                        <div class="mood-info">
+                            <div class="mood-label">Detected mood</div>
+                            <div class="mood-name">${moodData.name}</div>
+                            <div class="mood-desc">${moodData.desc}</div>
+                            ${topMatchedWords.length > 0 ? `
+                                <div class="keyword-chips">
+                                    ${topMatchedWords.slice(0, 12).map(w => `<span class="keyword-chip">${escapeHtml(w)}</span>`).join('')}
+                                    ${topMatchedWords.length > 12 ? `<span class="keyword-chip">+${topMatchedWords.length - 12} more</span>` : ''}
+                                </div>
+                            ` : ''}
+                            <div class="confidence-bar">
+                                <div class="confidence-fill" style="width: ${moodResult.confidence}%;"></div>
+                            </div>
+                            <div class="confidence-text">Confidence: ${moodResult.confidence}% · 
+                                ${moodKey === 'neutral' ? 'No strong mood signals' : topMatchedWords.length + ' mood keyword(s) matched'}
+                                ${sentimentScore !== null ? ` · Sentiment: ${sentimentScore.toFixed(2)}` : ''}
+                            </div>
+                        </div>
+                    </div>`;
+
+                    // ==== ALL MOOD SCORES ====
+                    const nonZeroMoods = MOOD_KEYS.filter(k => k !== 'neutral' && moodResult.scores[k] > 0)
+                        .sort((a,b) => moodResult.scores[b] - moodResult.scores[a]);
+
+                    if (nonZeroMoods.length > 0) {
+                        html += `<div style="margin-bottom: 1.8rem;">
+                            <div class="section-title">
+                                <span>🎭 All mood signals detected</span>
+                                <span class="mini-stat" style="background:#deecf3;color:#1c495e;">${nonZeroMoods.length} mood(s) triggered</span>
+                            </div>
+                            <div class="mood-scores-grid">`;
+
+                        const maxScore = Math.max(...nonZeroMoods.map(k => moodResult.scores[k]));
+
+                        nonZeroMoods.forEach(k => {
+                            const m = MOODS[k];
+                            const score = moodResult.scores[k];
+                            const pct = Math.round((score / maxScore) * 100);
+                            const isActive = k === moodKey;
+                            html += `<div class="mood-score-card ${isActive ? 'active' : ''}">
+                                <div class="emoji-sm">${m.emoji}</div>
+                                <div class="info">
+                                    <div class="name-sm">${m.name}${isActive ? ' ★' : ''}</div>
+                                    <div class="bar-sm">
+                                        <div class="bar-fill" style="width: ${pct}%; background: ${m.color};"></div>
+                                    </div>
+                                    <div class="count-sm">${score.toFixed(1)} pts · ${moodResult.matchedWords[k].length} word(s)</div>
+                                </div>
+                            </div>`;
+                        });
+
+                        html += `</div></div>`;
+                    }
+
+                    // Legend
+                    html += `<div class="legend">
+                        <span class="legend-item"><span class="legend-color" style="background:#d3e7db;"></span> noun</span>
+                        <span class="legend-item"><span class="legend-color" style="background:#cbe4ec;"></span> verb</span>
+                        <span class="legend-item"><span class="legend-color" style="background:#f0e1c7;"></span> adjective</span>
+                        <span class="legend-item"><span class="legend-color" style="background:#f0d9d9;"></span> stop word</span>
+                        <span class="legend-item"><span class="legend-color" style="background:#e8a33d;"></span> mood word</span>
+                    </div>`;
+
+                    // --- Tokens ---
+                    html += `<div style="margin-bottom: 1.4rem;">
+                        <div class="section-title">
+                            <span>🔤 Tokens & POS</span>
+                            <span class="mini-stat" style="background:#deecf3;color:#1c495e;">${tokens.length} terms</span>
+                            <span class="mini-stat" style="background:#f7e9e9;color:#8d3b3b;">${stopWordCount} stop words</span>
+                        </div>
+                        <div class="token-grid">`;
+
+                    if (tokens.length === 0) {
+                        html += `<span class="placeholder-text">No tokens found.</span>`;
+                    } else {
+                        const allMoodWords = new Set();
+                        Object.keys(moodResult.matchedWords).forEach(k => {
+                            moodResult.matchedWords[k].forEach(w => allMoodWords.add(w));
+                        });
+
+                        tokens.forEach((term, idx) => {
+                            const mainTag = posMap.get(idx) || 'Noun';
+                            const badgeClass = posToBadgeClass(mainTag);
+                            const isStop = isStopWord(term);
+                            const cleaned = normalizeTerm(term);
+                            const isMood = allMoodWords.has(cleaned);
+                            const stopClass = isStop ? 'stop-word' : '';
+                            const moodClass = isMood && !isStop ? 'mood-word' : '';
+                            const displayTag = mainTag.length > 7 ? mainTag.slice(0, 6) + '…' : mainTag;
+
+                            let titleText = `POS: ${mainTag}`;
+                            if (isStop) titleText += ' · stop word';
+                            if (isMood && !isStop) titleText += ' · mood indicator';
+
+                            html += `<span class="token-badge ${badgeClass} ${stopClass} ${moodClass}" title="${titleText}">
+                                ${escapeHtml(term)}
+                                <span style="font-size: 0.7rem; opacity: 0.75; margin-left: 0.2rem;">${displayTag}</span>
+                                ${isStop ? '<span class="stop-badge">stop</span>' : ''}
+                                ${(isMood && !isStop) ? '<span class="mood-badge">mood</span>' : ''}
+                            </span>`;
+                        });
+                    }
+                    html += `</div></div>`;
+
+                    // --- Sentences ---
+                    html += `<div style="margin-top: 0.8rem;">
+                        <div class="section-title">
+                            <span>📄 Sentences</span>
+                            <span class="mini-stat" style="background:#deecf3;color:#1c495e;">${sentences.length} detected</span>
+                        </div>`;
+
+                    if (sentences.length === 0) {
+                        html += `<div class="placeholder-text">No sentences detected.</div>`;
+                    } else {
+                        sentences.forEach((sentence, i) => {
+                            html += `<div class="sentence-block">
+                                <p><span style="font-weight: 600; color: #2c6e8f; margin-right: 0.5rem;">${i+1}.</span> ${escapeHtml(sentence.trim())}</p>
+                            </div>`;
+                        });
+                    }
+                    html += `</div>`;
+
+                    // --- Cleaned output ---
+                    const cleanedSentences = sentences.map(sentence => {
+                        const words = tokenize(sentence);
+                        const cleaned = words.filter(word => {
+                            const normalized = normalizeTerm(word);
+                            if (normalized === '') return false;
+                            return !STOP_WORDS.has(normalized);
+                        });
+                        return cleaned.join(' ');
+                    }).filter(s => s.trim().length > 0);
+
+                    html += `<div style="margin-top: 1.8rem;">
+                        <div class="section-title">
+                            <span>✨ Cleaned output (stop words removed)</span>
+                            <span class="mini-stat" style="background:#e0f2e9;color:#1c6b47;">${keptWordCount} words kept</span>
+                        </div>`;
+
+                    if (cleanedSentences.length === 0) {
+                        html += `<div class="cleaned-block"><p class="placeholder-text">No content left after removing stop words.</p></div>`;
+                    } else {
+                        cleanedSentences.forEach((sentence, i) => {
+                            html += `<div class="cleaned-block">
+                                <p><span style="font-weight: 600; color: #2f9e6b; margin-right: 0.5rem;">${i+1}.</span> ${escapeHtml(sentence)}</p>
+                            </div>`;
+                        });
+                    }
+                    html += `</div>`;
+
+                    outputContainer.innerHTML = html;
+                    statusBadge.textContent = `${tokens.length} tokens · mood: ${moodData.name}`;
+                    stopStats.textContent = `🚫 stop words: ${stopWordCount}`;
+                    cleanedStats.textContent = `✨ kept: ${keptWordCount}`;
+
+                } catch (e) {
+                    console.error('MoodLens processing error:', e);
+                    outputContainer.innerHTML = `<div class="placeholder-text">❌ Error during analysis: ${escapeHtml(e.message)}</div>`;
+                    statusBadge.textContent = 'error';
+                    stopStats.textContent = '🚫 stop words: ?';
+                    cleanedStats.textContent = '✨ kept: ?';
+                }
+            }
+
+            function escapeHtml(unsafe) {
+                if (!unsafe) return '';
+                return unsafe
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+
+            // ---- Event listeners ----
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const clearBtn = document.getElementById('clearBtn');
+
+            const sampleMap = {
+                sampleHappy: "I am so happy and excited today! Everything is wonderful and I feel amazing. I love my life and all the beautiful people in it. What a fantastic day!",
+                sampleSad: "I feel so sad and lonely today. I miss my friends and everything feels gloomy. I am disappointed and heartbroken, and I just want to cry.",
+                sampleAngry: "I am so angry and furious right now! This is absolutely ridiculous and unfair. I hate this situation and I am completely frustrated and annoyed.",
+                sampleAnxious: "I am really anxious and worried about tomorrow. I feel so nervous and stressed, and I can't stop overthinking everything. The uncertainty is overwhelming.",
+                sampleLove: "I love you so much my darling. You are adorable and I cherish every moment with you. My heart is full of affection and passion for you, sweetheart.",
+                sampleProud: "I am so proud of my achievement! I worked hard and succeeded, and now I feel accomplished and confident. This victory is a triumph I truly deserve.",
+                sampleLonely: "I feel so lonely and isolated lately. I feel abandoned and disconnected from everyone, like an outcast. Nobody seems to care and I feel so unwanted.",
+                sampleSick: "I feel so sick and unwell today. I have a terrible fever, a bad cough, and a sore throat. My head is pounding and I feel nauseous. I think I have the flu.",
+                sampleTired: "I am so exhausted and tired. I barely slept last night and I feel completely drained. I am so sleepy and weary, I just want to lie down and nap.",
+                sampleHungry: "I am absolutely starving right now! My stomach is growling and I have a huge craving for food. I could really go for a big meal right now.",
+                samplePain: "I am in so much pain right now. My back hurts and my head is throbbing. The ache is terrible and I feel sore all over. It is agonizing.",
+                sampleHomesick: "I am feeling so homesick. I miss my family and my hometown, and I long for the familiar places of my childhood. I wish I could go home.",
+                sampleMotivated: "I am so motivated and driven today! I have set ambitious goals and I am determined to succeed. I am focused, dedicated, and ready to work hard. Nothing will stop me!",
+                samplePlayful: "I am feeling so playful and silly today! Let's have some fun and play some games. I love joking around and being mischievous with my friends.",
+                samplePeaceful: "I feel so peaceful and calm right now. Everything is tranquil and serene, and I am at peace with myself and the world. It is a beautiful moment of harmony.",
+                sampleDetermined: "I am absolutely determined to succeed. Nothing will stop me. I am resolute, unwavering, and I will not give up until I achieve my goal.",
+                sampleAmused: "That was hilarious and so funny! I cannot stop laughing and chuckling. What a comical and entertaining joke, it was truly amusing.",
+                sampleFrustrated: "I am so frustrated and stuck right now. This is so frustrating and I feel completely blocked and hindered. Nothing is working and I feel thwarted at every turn.",
+                sampleWistful: "I feel so wistful and nostalgic, longing for the past. I yearn for the golden days of my childhood and wish I could go back. Those memories make me feel so bittersweet."
+            };
+
+            Object.keys(sampleMap).forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) {
+                    btn.addEventListener('click', () => {
+                        textInput.value = sampleMap[id];
+                        analyzeText(textInput.value);
+                        statusBadge.textContent = id.replace('sample', '').toLowerCase() + ' sample';
+                    });
+                }
+            });
+
+            window.addEventListener('load', () => analyzeText(textInput.value));
+            analyzeBtn.addEventListener('click', () => analyzeText(textInput.value));
+
+            clearBtn.addEventListener('click', () => {
+                textInput.value = '';
+                outputContainer.innerHTML = '<div class="placeholder-text">Cleared. Tell me how you feel and I\'ll detect your mood.</div>';
+                statusBadge.textContent = 'cleared';
+                stopStats.textContent = '🚫 stop words: 0';
+                cleanedStats.textContent = '✨ kept: 0';
+                textInput.focus();
+            });
+
+            textInput.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    e.preventDefault();
+                    analyzeText(textInput.value);
+                }
+            });
+        })();
+    </script>
+</body>
+</html>
